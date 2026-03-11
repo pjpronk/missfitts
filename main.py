@@ -27,3 +27,20 @@ while True:
         aim_pitch = max(-80.0, min(80.0, aim_pitch))
 
     world.set_aim(aim_yaw, aim_pitch)
+
+    # game logic (TARGET HIT PLACEHOLDER)
+    # TODO: Add cdoe that checks if the target is hit
+    target_hit = False 
+
+    # For now, we simulate that the key 'T' immitates the target being hit
+    if world.mouseWatcherNode.hasMouse():
+        if world.mouseWatcherNode.isButtonDown(world.win.getKeyboardMap().getMappedButton("t")):
+            target_hit = True
+
+    if target_hit:
+        print("Target hit")
+        world.spawn_random_target()
+        
+        # Voorkom dat hij 60x per seconde spawnt als je de knop ingedrukt houdt
+        while world.mouseWatcherNode.isButtonDown(world.win.getKeyboardMap().getMappedButton("t")):
+            world.taskMgr.step()

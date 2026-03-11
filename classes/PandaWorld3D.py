@@ -7,7 +7,7 @@ from panda3d.core import (
     ClockObject,
 )
 import math
-
+import random
 
 class PandaWorld3D(ShowBase):
     def __init__(self):
@@ -39,6 +39,20 @@ class PandaWorld3D(ShowBase):
 
         self.taskMgr.add(self._read_mouse, "_read_mouse")
         self.taskMgr.add(self.animate_gun, "animate_gun")
+
+        # target system
+        self.target_node = None
+        self.current_target_index = -1
+
+        self.dummy_node = None
+        self.current_dummy_index = -1
+        
+        # 10 predetermined positions (x, y, z) 
+        self.target_positions = [
+            (0, 10, 1), (-3, 12, 1.5), (3, 12, 1.5), 
+            (-5, 15, 2), (5, 15, 2), (0, 18, 0.5), 
+            (-4, 8, 2.5), (4, 8, 2.5), (-2, 20, 1.5), (2, 20, 1.5)
+        ]
 
     def setup_lights(self):
         ambient = AmbientLight("ambient")
@@ -166,3 +180,39 @@ class PandaWorld3D(ShowBase):
         self.gun_root.setR(math.sin(t * 1.2) * 1.0)
         return task.cont
 
+    def spawn_random_target(self):
+        # Remoce old blocks
+        if self.target_node is not None:
+            self.target_node.removeNode()
+        if self.dummy_node is not None:
+            self.dummy_node.removeNode()
+
+        # List with all 9 new possible locations
+        all_indices = list(range(len(self.target_positions)))
+
+        # chooses new location for target
+        target_opties = [i for i in all_indices if i != self.current_target_index]
+        self.current_target_index = random.choice(target_opties)
+        
+        # chooses new location for dummy
+        dummy_options = [i for i in all_indices if i != self.current_target_index and i != self.current_dummy_index]
+        self.current_dummy_index = random.choice(dummy_options)
+
+        new_target_pos = self.target_positions[self.current_target_index]
+        new_dummy_pos = self.target_positions[self.current_dummy_index]
+
+        # 4. Maak het rode blokje (Target)
+        self.target_node = self.create_box(
+            self.render,
+            size=(0.6, 0.6, 0.6),
+            pos=new_target_pos,
+            color=(0.9, 0.1, 0.1, 1),  # Rood
+        )
+
+        # 5. Maak het groene blokje (Dummy)
+        self.dummy_node = self.create_box(
+            self.render,
+            size=(0.6, 0.6, 0.6),
+            pos=new_dummy_pos,
+            color=(0.1, 0.9, 0.1, 1),  # Groen
+        )
