@@ -46,6 +46,7 @@ class PandaWorld3D(ShowBase):
 
         self.dummy_node = None
         self.current_dummy_index = -1
+        self.last_target_pos = None
         
         # 10 predetermined positions (x, y, z) 
         self.target_positions = [
@@ -53,6 +54,7 @@ class PandaWorld3D(ShowBase):
             (-5, 15, 2), (5, 15, 2), (0, 18, 0.5), 
             (-4, 8, 2.5), (4, 8, 2.5), (-2, 20, 1.5), (2, 20, 1.5)
         ]
+        
 
     def setup_lights(self):
         ambient = AmbientLight("ambient")
@@ -180,12 +182,18 @@ class PandaWorld3D(ShowBase):
         self.gun_root.setR(math.sin(t * 1.2) * 1.0)
         return task.cont
 
-    def spawn_random_target(self):
-        # Remoce old blocks
+    def spawn_random_target(self, target_size=0.6):
+        # Remove old blocks
         if self.target_node is not None:
             self.target_node.removeNode()
         if self.dummy_node is not None:
             self.dummy_node.removeNode()
+
+        # Save old positon of target for Fitts' Law berekening
+        if self.current_target_index != -1:
+            self.last_target_pos = self.target_positions[self.current_target_index]
+        else:
+            self.last_target_pos = (0, 0, 0) # Default for first target spawn, won't be used in ID calculation
 
         # List with all 9 new possible locations
         all_indices = list(range(len(self.target_positions)))
@@ -201,18 +209,32 @@ class PandaWorld3D(ShowBase):
         new_target_pos = self.target_positions[self.current_target_index]
         new_dummy_pos = self.target_positions[self.current_dummy_index]
 
-        # 4. Maak het rode blokje (Target)
+        # --- FITTS' LAW BEREKENING ---
+        id_score = 0.0
+        # Calculates the distance between the last target position and the new target position, and then calculates the ID score using Fitts' Law
+        if self.last_target_pos is not None:
+            p1 = self.last_target_pos
+            p2 = new_target_pos
+            # Euclidean distance formule
+            distance = math.sqrt((p2[0]-p1[0])**2 + (p2[1]-p1[1])**2 + (p2[2]-p1[2])**2)
+            # Shannon form van Fitts' Law: ID = log2(D/W + 1)
+            id_score = math.log2((distance / target_size) + 1)
+
+
+        # 4. make the red block (Target)
         self.target_node = self.create_box(
             self.render,
-            size=(0.6, 0.6, 0.6),
+            size=(target_size, target_size, target_size),
             pos=new_target_pos,
-            color=(0.9, 0.1, 0.1, 1),  # Rood
+            color=(0.9, 0.1, 0.1, 1),  # Red
         )
 
-        # 5. Maak het groene blokje (Dummy)
+        # 5. make the green block (Dummy)
         self.dummy_node = self.create_box(
             self.render,
-            size=(0.6, 0.6, 0.6),
+            size=(target_size, target_size, target_size),
             pos=new_dummy_pos,
-            color=(0.1, 0.9, 0.1, 1),  # Groen
+            color=(0.1, 0.9, 0.1, 1),  # Green
         )
+        
+        return id_score

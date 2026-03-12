@@ -1,6 +1,6 @@
 from classes.PandaWorld3D import PandaWorld3D
 from classes.HapticDevice import HapticDevice
-
+import time
 MOUSE_SENSITIVITY = 0.15
 HAPTIC_SCALE = 1.0  # aim degrees per motor degree
 
@@ -11,6 +11,17 @@ world = PandaWorld3D()
 
 aim_yaw = 0.0
 aim_pitch = 0.0
+
+# Trial variables
+target_size = 0.6
+total_trials = 20
+current_trial = 0
+trial_started = False
+total_id = 0.0
+start_time = 0.0
+
+world.spawn_random_target(target_size=target_size)
+print(f"Shoot the first target to start the trial of {total_trials}!")
 
 while True:
     world.taskMgr.step()
@@ -28,8 +39,7 @@ while True:
 
     world.set_aim(aim_yaw, aim_pitch)
 
-    # game logic (TARGET HIT PLACEHOLDER)
-    # TODO: Add cdoe that checks if the target is hit
+    # --- GAME LOGICA (TARGET HIT) ---
     target_hit = False 
 
     # For now, we simulate that the key 'T' immitates the target being hit
@@ -38,9 +48,38 @@ while True:
             target_hit = True
 
     if target_hit:
-        print("Target hit")
-        world.spawn_random_target()
+        if not trial_started:
+            # This is the first hit that starts the trial
+            print("\n--- TRIAL GESTART ---")
+            trial_started = True
+            start_time = time.time()
+            # Spawn the first target and get its difficulty (ID score), even though it won't be used in the ID calculation since there's no previous target
+            world.spawn_random_target(target_size=target_size)
+        else:
+            # This is a hit during an ongoing trial, so we calculate the ID score for the jump to the new target and accumulate it
+            current_trial += 1
+            
+            # Spawn a new target and get the ID score for the jump to this new target, which is based on the distance from the last target to the new target and the target size
+            difficulty = world.spawn_random_target(target_size=target_size)
+            total_id += difficulty
+            
+            print(f"Hit {current_trial}/{total_trials} | ID deze sprong: {difficulty:.2f}")
+
+            # Check if the trial is complete
+            if current_trial >= total_trials:
+                end_time = time.time()
+                total_time = end_time - start_time
+                throughput = total_id / total_time if total_time > 0 else 0
+                
+                print("\n=== TRIAL COMPLETE ===")
+                print(f"Total timne: {total_time:.2f} seconds")
+                print(f"Total ID: {total_id:.2f} bits")
+                print(f"Average Throughput: {throughput:.2f} bits/seconde")
+                print("======================")
+                
+                # Sluit het programma (of je kunt een pauze/restart scherm maken)
+                break 
         
-        # Voorkom dat hij 60x per seconde spawnt als je de knop ingedrukt houdt
+        # Voorkom 'machinegeweer' klikken
         while world.mouseWatcherNode.isButtonDown(world.win.getKeyboardMap().getMappedButton("t")):
             world.taskMgr.step()
