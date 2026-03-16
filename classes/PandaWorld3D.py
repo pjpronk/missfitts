@@ -9,6 +9,10 @@ from panda3d.core import (
 import math
 import random
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 6b93118 (Adding graphics, merging target respawn spots)
 class PandaWorld3D(ShowBase):
     def __init__(self):
         super().__init__()
@@ -26,9 +30,40 @@ class PandaWorld3D(ShowBase):
         # Camera position
         self.camera.setPos(0, -10, 2)
 
+<<<<<<< HEAD
         self.setup_lights()
         self.create_floor()
         self.create_wall_box()
+=======
+        # predetermined configs (size, pos, color)
+        self.spot_configs = [
+            ((1.0, 1.0, 1.0), (-6, 15, 4.4), (0.6, 0.2, 0.2, 1)),  # Left Mid-ground
+            ((0.8, 0.8, 1.5), (5, 12, 0.75), (0.2, 0.5, 0.2, 1)),  # Right Near-ground
+            ((1.2, 1.2, 1.2), (0, 25, 3.0), (0.2, 0.2, 0.6, 1)),   # Center Far-ground 
+            ((1.7, 1.7, 1.7), (-8, 17, 0.35), (0.5, 0.5, 0.1, 1)), # Far Left
+            ((1.5, 1.5, 0.8), (4, 5, 0.4), (0.5, 0.1, 0.5, 1)),    # Right Mid 
+            ((0.9, 0.9, 2.0), (-3, 10, 1.0), (0.1, 0.5, 0.5, 1)),  # Left Near 
+            ((1.1, 1.1, 1.1), (4, 8, 5.0), (0.8, 0.4, 0.0, 1)),    # Far Right 
+            ((0.9, 0.6, 1.2), (0.2, 0.15, 0.65), (0.3, 0.3, 0.3, 1)) # Mid Center
+        ]
+
+        # Extract target pos with height adjustment
+        self.target_positions = []
+        for size, pos, color in self.spot_configs:
+            x, y, z = pos
+            box_height = size[2]  # The 3rd value in the 'size' tuple is the height
+            
+            # Keep X and Y the same, but add the box's height to Z
+            self.target_positions.append((x, y, z + box_height))
+
+        # Environment & Player Setup
+        self.setup_lights()
+        self.create_floor()
+        self.create_wall_box()
+        self.create_respawn_spots()
+        self.create_stairs()
+
+>>>>>>> 6b93118 (Adding graphics, merging target respawn spots)
         self.create_gun_3d()
         self.create_crosshair()
 
@@ -47,6 +82,7 @@ class PandaWorld3D(ShowBase):
         self.dummy_node = None
         self.current_dummy_index = -1
         self.last_target_pos = None
+<<<<<<< HEAD
         
         # 10 predetermined positions (x, y, z) 
         self.target_positions = [
@@ -59,6 +95,13 @@ class PandaWorld3D(ShowBase):
     def setup_lights(self):
         ambient = AmbientLight("ambient")
         ambient.setColor((0.4, 0.4, 0.4, 1))
+=======
+
+
+    def setup_lights(self):
+        ambient = AmbientLight("ambient")
+        ambient.setColor((0.7, 0.7, 0.7, 1))
+>>>>>>> 6b93118 (Adding graphics, merging target respawn spots)
         ambient_np = self.render.attachNewNode(ambient)
         self.render.setLight(ambient_np)
 
@@ -76,6 +119,7 @@ class PandaWorld3D(ShowBase):
         floor.setPos(0, 10, 0)
         floor.setColor(0.25, 0.28, 0.25, 1)
 
+<<<<<<< HEAD
     def create_box(self, parent, size=(1, 1, 1), pos=(0, 0, 0), color=(1, 1, 1, 1)):
         box = self.loader.loadModel("models/box")
         box.clearTexture()
@@ -105,6 +149,62 @@ class PandaWorld3D(ShowBase):
             size=(1.5, 1.5, 3),
             pos=(-4, 14, 1.5),
             color=(0.4, 0.4, 0.5, 1),
+=======
+    def create_box(self, parent, size=(1, 1, 1), pos=(0, 0, 0), color=(1, 1, 1, 1), texture_file=None):
+        box = self.loader.loadModel("models/box")
+        if texture_file:
+            box.setTexture(self.loader.loadTexture(texture_file))
+        else:
+            box.clearTexture()
+            box.setColor(*color)
+        box.reparentTo(parent)
+        box.setScale(size[0], size[1], size[2])
+        box.setPos(*pos)
+        return box
+
+    def create_wall_box(self):
+        width = 20
+        depth = 30
+        height = 10
+        # right wall
+        self.create_box(
+            self.render,
+            size=(1, depth+10, height),
+            pos=(width/2, -10, 0),
+            color=(0.5, 0.2, 0.2, 1),
+        )
+
+        # left wall
+        self.create_box(
+            self.render,
+            size=(1, 40, height),
+            pos=(-width/2, -10, 0),
+            color=(0.5, 0.2, 0.2, 1),
+        )
+
+        # back wall
+        self.create_box(
+            self.render,
+            size=(width, 1, height),
+            pos=(-width/2, depth, 0),
+            color=(0.5, 0.2, 0.2, 1),
+        )
+
+        # ceiling
+        self.create_box(
+            self.render,
+            size=(width, depth+10, 1),
+            pos=(-width/2, -10, height),
+            color=(0.8, 0.8, 0.8, 1),
+        )
+
+        # second floor
+        self.create_box(
+            self.render,
+            size=(width/2-5, depth, 1),
+            pos=(5, 0, height/2-1),
+            color=(0.5, 0.5, 0.5, 1),
+>>>>>>> 6b93118 (Adding graphics, merging target respawn spots)
         )
 
     def create_gun_3d(self):
@@ -182,6 +282,56 @@ class PandaWorld3D(ShowBase):
         self.gun_root.setR(math.sin(t * 1.2) * 1.0)
         return task.cont
 
+<<<<<<< HEAD
+=======
+    def create_targets(self):
+        self.target_cube = self.create_box(
+        self.render,
+        size=(0.8, 0.8, 0.8),
+        pos=(5, 15, 4),
+        color=(0, 1, 1, 1) # Cyan
+    )
+        
+    def create_respawn_spots(self):
+        """
+        Creates 8 distinct boxes at various distances and heights 
+        using the existing create_box function.
+        """
+        self.respawn_nodes = []
+        for size, pos, color in self.spot_configs:
+            node = self.create_box(self.render, size=size, pos=pos, color=color, texture_file="textures/woodplank.jpg")
+            self.respawn_nodes.append(node)
+
+    def create_stairs(self):
+        """
+        Creates a staircase leading up to the second floor platform.
+        """
+        num_steps = 12              # Increased slightly for a smoother climb
+        step_size = (1.5, 30, 0.4) # Width, Depth, Thickness of each step
+
+        # Start on the ground (z=0), slightly to the left and forward in the room
+        start_pos = (-3.0, 5.0, 0.0)   
+        
+        # End exactly at the edge of your second floor (x=5) and its height (z=4)
+        end_pos = (4.0, 9, 4.0)     
+
+        for i in range(num_steps):
+            # Calculate percentage along the staircase (0.0 to 1.0)
+            t = i / (num_steps - 1)
+            
+            # Find the exact X, Y, Z for this step
+            step_x = start_pos[0] + (end_pos[0] - start_pos[0]) * t
+            step_y = start_pos[1] + (end_pos[1] - start_pos[1]) * t
+            step_z = start_pos[2] + (end_pos[2] - start_pos[2]) * t
+            
+            self.create_box(
+                self.render,
+                size=step_size,
+                pos=(step_x, step_y, step_z),
+                color=(1, 1, 0, 1), # Bright green, just like the drawing!
+            )
+        
+>>>>>>> 6b93118 (Adding graphics, merging target respawn spots)
     def spawn_random_target(self, target_size=0.6):
         # Remove old blocks
         if self.target_node is not None:
@@ -237,4 +387,9 @@ class PandaWorld3D(ShowBase):
             color=(0.1, 0.9, 0.1, 1),  # Green
         )
         
+<<<<<<< HEAD
         return id_score
+=======
+        return id_score
+    
+>>>>>>> 6b93118 (Adding graphics, merging target respawn spots)

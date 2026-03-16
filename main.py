@@ -1,6 +1,10 @@
 from classes.PandaWorld3D import PandaWorld3D
 from classes.HapticDevice import HapticDevice
 import time
+<<<<<<< HEAD
+=======
+
+>>>>>>> 6b93118 (Adding graphics, merging target respawn spots)
 MOUSE_SENSITIVITY = 0.15
 HAPTIC_SCALE = 1.0  # aim degrees per motor degree
 

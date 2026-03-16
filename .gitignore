@@ -1,3 +1,7 @@
+<<<<<<< HEAD
 .venv
 classes/__pycache__
 .DS_Store
+=======
+.venv
+>>>>>>> 6b93118 (Adding graphics, merging target respawn spots)
