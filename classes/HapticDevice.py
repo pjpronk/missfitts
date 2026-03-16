@@ -3,11 +3,7 @@ import numpy as np
 import serial
 import serial.tools.list_ports
 
-<<<<<<< HEAD
-from classes.HaplyHAPI import Board, Device, Pantograph
-=======
 from classes.HaplyHAPI import Board, Device, Pantograph, Mechanisms
->>>>>>> 6b93118 (Adding graphics, merging target respawn spots)
 
 
 class HapticDevice:
@@ -55,60 +51,17 @@ class HapticDevice:
                     print("[HapticDevice]: Ready.")
                     break
 
-<<<<<<< HEAD
-            self._device.device_read_data()
-            angles = self._device.get_device_angles()
-            pos = self._device.get_device_position(angles)
-            self._last_angles = (float(angles[0]), float(angles[1]))
-            self._last_position = (float(pos[0]), float(pos[1]))
-            self._cal_angles = (0.0, 0.0)
-            self._cal_position = (0.0, 0.0)
-=======
->>>>>>> 6b93118 (Adding graphics, merging target respawn spots)
             self.connected = True
         else:
             print("[HapticDevice]: No device found, running without haptics.")
             self.connected = False
 
-<<<<<<< HEAD
-    def calibrate(self):
-        """Sets the current position and angles as the (0, 0) origin."""
-        self._cal_position = self._last_position
-        self._cal_angles = self._last_angles
-        print(f"[HapticDevice]: Calibrated — pos={self._cal_position}, angles={self._cal_angles}")
-
-    def _read_device(self):
-        """Reads a fresh packet if one is available; otherwise uses cached values."""
-        if self._board.data_available():
-            self._device.device_read_data()
-            angles = self._device.get_device_angles()
-            pos = self._device.get_device_position(angles)
-            self._last_angles = (float(angles[0]), float(angles[1]))
-            self._last_position = (float(pos[0]), float(pos[1]))
-
-    def get_angles(self) -> tuple[float, float]:
-        """Returns calibrated motor angles (a1, a2) in degrees.
-        Differential (a1 - a2) correlates with left/right,
-        common-mode (a1 + a2) correlates with forward/backward."""
-        self._read_device()
-        a1 = self._last_angles[0] - self._cal_angles[0]
-        a2 = self._last_angles[1] - self._cal_angles[1]
-        return a1, a2
-
-    def get_position(self) -> tuple[float, float]:
-        """Returns calibrated endpoint position (x, y) in meters."""
-        self._read_device()
-        x = self._last_position[0] - self._cal_position[0]
-        y = self._last_position[1] - self._cal_position[1]
-        return x, y
-=======
     def get_position(self) -> tuple[float, float]:
         """Returns endpoint position (x, y) in meters."""
         self._device.device_read_data()
         angles = self._device.get_device_angles()
         pos = self._device.get_device_position(angles)
         return float(pos[0]), float(pos[1])
->>>>>>> 6b93118 (Adding graphics, merging target respawn spots)
 
     def set_force(self, fx: float, fy: float):
         """Sends Cartesian force (fx, fy) in Newtons to the device."""

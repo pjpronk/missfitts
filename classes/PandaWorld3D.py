@@ -9,10 +9,6 @@ from panda3d.core import (
 import math
 import random
 
-<<<<<<< HEAD
-=======
-
->>>>>>> 6b93118 (Adding graphics, merging target respawn spots)
 class PandaWorld3D(ShowBase):
     def __init__(self):
         super().__init__()
@@ -30,11 +26,6 @@ class PandaWorld3D(ShowBase):
         # Camera position
         self.camera.setPos(0, -10, 2)
 
-<<<<<<< HEAD
-        self.setup_lights()
-        self.create_floor()
-        self.create_wall_box()
-=======
         # predetermined configs (size, pos, color)
         self.spot_configs = [
             ((1.0, 1.0, 1.0), (-6, 15, 4.4), (0.6, 0.2, 0.2, 1)),  # Left Mid-ground
@@ -63,7 +54,6 @@ class PandaWorld3D(ShowBase):
         self.create_respawn_spots()
         self.create_stairs()
 
->>>>>>> 6b93118 (Adding graphics, merging target respawn spots)
         self.create_gun_3d()
         self.create_crosshair()
 
@@ -82,26 +72,11 @@ class PandaWorld3D(ShowBase):
         self.dummy_node = None
         self.current_dummy_index = -1
         self.last_target_pos = None
-<<<<<<< HEAD
-        
-        # 10 predetermined positions (x, y, z) 
-        self.target_positions = [
-            (0, 10, 1), (-3, 12, 1.5), (3, 12, 1.5), 
-            (-5, 15, 2), (5, 15, 2), (0, 18, 0.5), 
-            (-4, 8, 2.5), (4, 8, 2.5), (-2, 20, 1.5), (2, 20, 1.5)
-        ]
-        
-
-    def setup_lights(self):
-        ambient = AmbientLight("ambient")
-        ambient.setColor((0.4, 0.4, 0.4, 1))
-=======
 
 
     def setup_lights(self):
         ambient = AmbientLight("ambient")
         ambient.setColor((0.7, 0.7, 0.7, 1))
->>>>>>> 6b93118 (Adding graphics, merging target respawn spots)
         ambient_np = self.render.attachNewNode(ambient)
         self.render.setLight(ambient_np)
 
@@ -119,37 +94,6 @@ class PandaWorld3D(ShowBase):
         floor.setPos(0, 10, 0)
         floor.setColor(0.25, 0.28, 0.25, 1)
 
-<<<<<<< HEAD
-    def create_box(self, parent, size=(1, 1, 1), pos=(0, 0, 0), color=(1, 1, 1, 1)):
-        box = self.loader.loadModel("models/box")
-        box.clearTexture()
-        box.reparentTo(parent)
-        box.setScale(size[0], size[1], size[2])
-        box.setPos(*pos)
-        box.setColor(*color)
-        return box
-
-    def create_wall_box(self):
-        self.create_box(
-            self.render,
-            size=(2.5, 0.4, 2.5),
-            pos=(0, 8, 1.25),
-            color=(0.72, 0.72, 0.78, 1),
-        )
-
-        self.create_box(
-            self.render,
-            size=(1.2, 1.2, 1.2),
-            pos=(3, 11, 0.6),
-            color=(0.55, 0.35, 0.25, 1),
-        )
-
-        self.create_box(
-            self.render,
-            size=(1.5, 1.5, 3),
-            pos=(-4, 14, 1.5),
-            color=(0.4, 0.4, 0.5, 1),
-=======
     def create_box(self, parent, size=(1, 1, 1), pos=(0, 0, 0), color=(1, 1, 1, 1), texture_file=None):
         box = self.loader.loadModel("models/box")
         if texture_file:
@@ -204,7 +148,6 @@ class PandaWorld3D(ShowBase):
             size=(width/2-5, depth, 1),
             pos=(5, 0, height/2-1),
             color=(0.5, 0.5, 0.5, 1),
->>>>>>> 6b93118 (Adding graphics, merging target respawn spots)
         )
 
     def create_gun_3d(self):
@@ -282,8 +225,6 @@ class PandaWorld3D(ShowBase):
         self.gun_root.setR(math.sin(t * 1.2) * 1.0)
         return task.cont
 
-<<<<<<< HEAD
-=======
     def create_targets(self):
         self.target_cube = self.create_box(
         self.render,
@@ -331,7 +272,6 @@ class PandaWorld3D(ShowBase):
                 color=(1, 1, 0, 1), # Bright green, just like the drawing!
             )
         
->>>>>>> 6b93118 (Adding graphics, merging target respawn spots)
     def spawn_random_target(self, target_size=0.6):
         # Remove old blocks
         if self.target_node is not None:
@@ -387,9 +327,5 @@ class PandaWorld3D(ShowBase):
             color=(0.1, 0.9, 0.1, 1),  # Green
         )
         
-<<<<<<< HEAD
-        return id_score
-=======
         return id_score
     
->>>>>>> 6b93118 (Adding graphics, merging target respawn spots)

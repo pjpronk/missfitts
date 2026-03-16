@@ -14,13 +14,9 @@ First, create and activate a python virtual environment by running:
 
 ```
 python -m venv .venv
-<<<<<<< HEAD
-./.venv/bin/activate
-=======
 .venv\Scripts\activate
 
-./.venv/bin/activate 
->>>>>>> 6b93118 (Adding graphics, merging target respawn spots)
+./.venv/bin/activate
 ```
 
 > .venv is automatically gitignored in this project. If you want to store the environment in a different folder, you have to add it to the gitignore
