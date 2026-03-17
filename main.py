@@ -7,7 +7,7 @@ MOUSE_SENSITIVITY = 0.15
 HAPTIC_SCALE = 1.0  # degrees per motor degree
 
 haptic = HapticDevice()
-force_gen = HapticForceGenerator(kp=0.20, kd=0.01)
+force_gen = HapticForceGenerator(f_max=-200, sigma=30.0)
 
 if haptic.connected:
     haptic.calibrate()
@@ -44,11 +44,8 @@ def update_force():
     if not haptic.connected:
         return
     error = world.get_target_position_error()
-    vx, vy = haptic.get_velocity()
-    if error is not None:
-        fx, fy = force_gen.calculate_force(*error, vx, vy)
-    else:
-        fx, fy = force_gen.calculate_force(0.0, 0.0, vx, vy)
+    dead_zone = world.get_target_angular_radius(target_size) or 0.0
+    fx, fy = force_gen.calculate_force(*error, 0) if error is not None else (0.0, 0.0)
     haptic.set_force(-fx, fy)
 
 

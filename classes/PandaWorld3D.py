@@ -385,6 +385,17 @@ class PandaWorld3D(ShowBase):
         pitch_error = math.degrees(math.atan2(local_pos.z, local_pos.y))
         return yaw_error, pitch_error
 
+    def get_target_angular_radius(self, target_size: float) -> float | None:
+        """Returns the angular radius of the target in degrees based on its
+        physical size and distance from the camera."""
+        if self.target_node is None:
+            return None
+        local_pos = self.camera.getRelativePoint(self.render, self.target_node.getPos(self.render))
+        distance = local_pos.length()
+        if distance < 1e-6:
+            return None
+        return math.degrees(math.atan2(target_size / 2.0, distance))
+
     def get_target_position_error(self) -> tuple[float, float] | None:
         """Returns (yaw_error, pitch_error) in degrees from crosshair to target.
         Positive yaw = target is to the right; positive pitch = target is above."""
