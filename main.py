@@ -1,5 +1,6 @@
 from classes.PandaWorld3D import PandaWorld3D
 from classes.HapticDevice import HapticDevice
+from classes.HapticForceGenerator import HapticForceGenerator
 import time
 from io import StringIO
 
@@ -7,6 +8,8 @@ MOUSE_SENSITIVITY = 0.15
 HAPTIC_SCALE = 1.0  # aim degrees per motor degree
 
 haptic = HapticDevice()
+force_gen = HapticForceGenerator(kp=0.2, kd=0.00)
+
 if haptic.connected:
     haptic.calibrate()
 world = PandaWorld3D()
@@ -35,9 +38,18 @@ while True:
 
     if haptic.connected:
         a1, a2 = haptic.get_angles()
-        haptic.set_force(0, 0)
         aim_pitch   = (a1 - a2) * HAPTIC_SCALE
         aim_yaw = (-a1 - a2) * HAPTIC_SCALE
+        
+        angular_error = world.get_target_angular_error()
+        if angular_error is not None:
+            fx, fy = force_gen.calculate_force(*angular_error)
+        else:
+            fx, fy = 0.0, 0.0
+        world.draw_force_vector(fx, fy, scale=0.001)
+
+
+        haptic.set_force(fx, fy)
     else:
         dx, dy = world.get_mouse_delta()
         aim_yaw -= dx * MOUSE_SENSITIVITY
@@ -106,6 +118,5 @@ while True:
                 CSV.close()
                 break 
         
-        # Voorkom 'machinegeweer' klikken
         while world.mouseWatcherNode.isButtonDown(world.win.getKeyboardMap().getMappedButton("t")):
             world.taskMgr.step()

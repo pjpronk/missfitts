@@ -9,7 +9,9 @@ from panda3d.core import (
     CollisionNode, 
     CollisionRay, 
     CollisionHandlerQueue,
-    BitMask32
+    BitMask32,
+    Point2,
+    LineSegs
 )
 import math
 import random
@@ -362,3 +364,39 @@ class PandaWorld3D(ShowBase):
             self.rayQueue.sortEntries()
             return self.rayQueue.getEntry(0).getIntoNodePath()
         return None
+    def get_target_angular_error(self) -> tuple[float, float] | None:
+        """Returns (yaw_error, pitch_error) in degrees from crosshair to target.
+        Positive yaw = target is to the right; positive pitch = target is above."""
+        if self.target_node is None:
+            return None
+        local_pos = self.camera.getRelativePoint(self.render, self.target_node.getPos(self.render))
+        if local_pos.y <= 0:
+            return None  # target is behind the camera
+        yaw_error   = math.degrees(math.atan2(local_pos.x, local_pos.y))
+        pitch_error = math.degrees(math.atan2(local_pos.z, local_pos.y))
+        return yaw_error, pitch_error
+
+    def get_target_position_2d(self) -> tuple[float, float] | None:
+        if self.target_node is None:
+            return None
+        pos3d = self.target_node.getPos(self.render)
+        p2 = Point2()
+        if self.camLens.project(self.camera.getRelativePoint(self.render, pos3d), p2):
+            w = self.win.getXSize()
+            h = self.win.getYSize()
+            px = (p2.x + 1) / 2 * w
+            py = (1 - p2.y) / 2 * h
+            return px, py
+        return None  # target is behind the camera
+
+    def draw_force_vector(self, fx: float, fy: float, scale: float = 0.001):
+        if hasattr(self, '_force_line_np') and self._force_line_np:
+            self._force_line_np.removeNode()
+        ls = LineSegs()
+        ls.setThickness(2)
+        ls.setColor(1, 0.5, 0, 1)  # orange
+        # Origin at screen center (0, 0) in aspect2d space
+        ls.moveTo(0, 0, 0)
+        # fx is horizontal (maps to X in aspect2d), fy is vertical (maps to Z in aspect2d)
+        ls.drawTo(fx * scale, 0, -fy * scale)
+        self._force_line_np = self.aspect2d.attachNewNode(ls.create())
