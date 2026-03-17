@@ -5,6 +5,11 @@ from panda3d.core import (
     WindowProperties,
     CardMaker,
     ClockObject,
+    CollisionTraverser, 
+    CollisionNode, 
+    CollisionRay, 
+    CollisionHandlerQueue,
+    BitMask32
 )
 import math
 import random
@@ -72,6 +77,24 @@ class PandaWorld3D(ShowBase):
         self.dummy_node = None
         self.current_dummy_index = -1
         self.last_target_pos = None
+        
+        
+        ## Setting up hit detection system
+        self.cTrav = CollisionTraverser()
+        self.rayQueue = CollisionHandlerQueue()
+        
+        # Create the ray attached to the camera
+        pickerNode = CollisionNode('mouseRay')
+        pickerNP = self.camera.attachNewNode(pickerNode)
+        self.pickerRay = CollisionRay(0, 0, 0, 0, 1, 0)
+        pickerNode.addSolid(self.pickerRay)
+        
+        # Register with traverser
+        self.cTrav.addCollider(pickerNP, self.rayQueue)
+        
+        # Use a BitMask so we only hit targets, not walls/floors
+        self.target_mask = BitMask32.bit(1)
+        pickerNode.setFromCollideMask(self.target_mask)
 
 
     def setup_lights(self):
@@ -94,7 +117,7 @@ class PandaWorld3D(ShowBase):
         floor.setPos(0, 10, 0)
         floor.setColor(0.25, 0.28, 0.25, 1)
 
-    def create_box(self, parent, size=(1, 1, 1), pos=(0, 0, 0), color=(1, 1, 1, 1), texture_file=None):
+    def create_box(self, parent, size=(1, 1, 1), pos=(0, 0, 0), color=(1, 1, 1, 1), texture_file=None, mask=None):
         box = self.loader.loadModel("models/box")
         if texture_file:
             box.setTexture(self.loader.loadTexture(texture_file))
@@ -104,6 +127,8 @@ class PandaWorld3D(ShowBase):
         box.reparentTo(parent)
         box.setScale(size[0], size[1], size[2])
         box.setPos(*pos)
+        if mask:
+            box.setCollideMask(mask)
         return box
 
     def create_wall_box(self):
@@ -317,6 +342,7 @@ class PandaWorld3D(ShowBase):
             size=(target_size, target_size, target_size),
             pos=new_target_pos,
             color=(0.9, 0.1, 0.1, 1),  # Red
+            mask=self.target_mask,
         )
 
         # 5. make the green block (Dummy)
@@ -329,3 +355,10 @@ class PandaWorld3D(ShowBase):
         
         return id_score
     
+    def get_targeted_node(self):
+        print("checking for hit")
+        self.cTrav.traverse(self.render)
+        if self.rayQueue.getNumEntries() > 0:
+            self.rayQueue.sortEntries()
+            return self.rayQueue.getEntry(0).getIntoNodePath()
+        return None

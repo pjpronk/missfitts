@@ -47,14 +47,22 @@ while True:
     world.set_aim(aim_yaw, aim_pitch)
 
     # --- GAME LOGICA (TARGET HIT) ---
-    target_hit = False 
-
+    pulled_trigger = False 
+    Target_Hit = 0
+    
     # For now, we simulate that the key 'T' immitates the target being hit
     if world.mouseWatcherNode.hasMouse():
         if world.mouseWatcherNode.isButtonDown(world.win.getKeyboardMap().getMappedButton("t")):
-            target_hit = True
+            pulled_trigger = True
+            looked_at = world.get_targeted_node()
+            print("looking at", looked_at)
+        
+            # Check if what we are looking at is the actual target_node
+            if looked_at is not None:
+                Target_Hit = 1
+                print("Bingo")
 
-    if target_hit:
+    if pulled_trigger:
         if not trial_started:
             # This is the first hit that starts the trial
             print("\n--- TRIAL GESTART ---")
@@ -78,7 +86,7 @@ while True:
             print(f"Hit {current_trial}/{total_trials} | ID deze sprong: {difficulty:.2f} | time taken: {shot_time:.2f} seconds")
             
             # Writing shot data
-            CSV.write(f"{current_trial}, {difficulty}, {shot_time}\n")
+            CSV.write(f"{current_trial}, {difficulty}, {shot_time}, {Target_Hit}\n")
             
             old_time = new_time
 
