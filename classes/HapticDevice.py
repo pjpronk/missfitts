@@ -58,6 +58,9 @@ class HapticDevice:
             self._last_position = (float(pos[0]), float(pos[1]))
             self._cal_angles = (0.0, 0.0)
             self._cal_position = (0.0, 0.0)
+            self._vel_pos = (float(pos[0]), float(pos[1]))
+            self._vel_time = time.monotonic()
+            self._vel = (0.0, 0.0)
             self.connected = True
         else:
             print("[HapticDevice]: No device found, running without haptics.")
@@ -93,6 +96,23 @@ class HapticDevice:
         x = self._last_position[0] - self._cal_position[0]
         y = self._last_position[1] - self._cal_position[1]
         return x, y
+
+    def get_velocity(self, alpha: float = 0.2) -> tuple[float, float]:
+        """Returns low-pass filtered end-effector velocity (vx, vy) in m/s."""
+        now = time.monotonic()
+        x, y = self.get_position()
+        dt = now - self._vel_time
+        if dt > 0:
+            raw_vx = (x - self._vel_pos[0]) / dt
+            raw_vy = (y - self._vel_pos[1]) / dt
+            vx = alpha * raw_vx + (1 - alpha) * self._vel[0]
+            vy = alpha * raw_vy + (1 - alpha) * self._vel[1]
+        else:
+            vx, vy = self._vel
+        self._vel_time = now
+        self._vel_pos = (x, y)
+        self._vel = (vx, vy)
+        return vx, vy
 
     def set_force(self, fx: float, fy: float):
         """Sends Cartesian force (fx, fy) in Newtons to the device."""

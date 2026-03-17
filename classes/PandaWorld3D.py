@@ -385,18 +385,17 @@ class PandaWorld3D(ShowBase):
         pitch_error = math.degrees(math.atan2(local_pos.z, local_pos.y))
         return yaw_error, pitch_error
 
-    def get_target_position_2d(self) -> tuple[float, float] | None:
+    def get_target_position_error(self) -> tuple[float, float] | None:
+        """Returns (yaw_error, pitch_error) in degrees from crosshair to target.
+        Positive yaw = target is to the right; positive pitch = target is above."""
         if self.target_node is None:
             return None
-        pos3d = self.target_node.getPos(self.render)
-        p2 = Point2()
-        if self.camLens.project(self.camera.getRelativePoint(self.render, pos3d), p2):
-            w = self.win.getXSize()
-            h = self.win.getYSize()
-            px = (p2.x + 1) / 2 * w
-            py = (1 - p2.y) / 2 * h
-            return px, py
-        return None  # target is behind the camera
+        local_pos = self.camera.getRelativePoint(self.render, self.target_node.getPos(self.render))
+        if local_pos.y <= 0:
+            return None  # target is behind the camera
+        yaw_error   = math.degrees(math.atan2(local_pos.x, local_pos.y))
+        pitch_error = math.degrees(math.atan2(local_pos.z, local_pos.y))
+        return yaw_error, pitch_error
 
     def draw_force_vector(self, fx: float, fy: float, scale: float = 0.001):
         if hasattr(self, '_force_line_np') and self._force_line_np:

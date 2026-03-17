@@ -7,7 +7,7 @@ MOUSE_SENSITIVITY = 0.15
 HAPTIC_SCALE = 1.0  # degrees per motor degree
 
 haptic = HapticDevice()
-force_gen = HapticForceGenerator(kp=0.2, kd=0.00)
+force_gen = HapticForceGenerator(kp=0.20, kd=0.01)
 
 if haptic.connected:
     haptic.calibrate()
@@ -43,10 +43,13 @@ def update_aim(yaw, pitch):
 def update_force():
     if not haptic.connected:
         return
-    angular_error = world.get_target_angular_error()
-    fx, fy = force_gen.calculate_force(*angular_error) if angular_error is not None else (0.0, 0.0)
-    world.draw_force_vector(fx, fy, scale=0.001)
-    haptic.set_force(fx, fy)
+    error = world.get_target_position_error()
+    vx, vy = haptic.get_velocity()
+    if error is not None:
+        fx, fy = force_gen.calculate_force(*error, vx, vy)
+    else:
+        fx, fy = force_gen.calculate_force(0.0, 0.0, vx, vy)
+    haptic.set_force(-fx, fy)
 
 
 def handle_shot(target_hit):
@@ -94,21 +97,24 @@ def is_trigger_pressed():
         world.win.getKeyboardMap().getMappedButton("t")
     )
 
+try:
+    while True:
+        world.taskMgr.step()
 
-while True:
-    world.taskMgr.step()
+        aim_yaw, aim_pitch = update_aim(aim_yaw, aim_pitch)
+        update_force()
+        world.set_aim(aim_yaw, aim_pitch)
 
-    aim_yaw, aim_pitch = update_aim(aim_yaw, aim_pitch)
-    update_force()
-    world.set_aim(aim_yaw, aim_pitch)
+        trigger_down = is_trigger_pressed()
 
-    trigger_down = is_trigger_pressed()
+        if trigger_down and not trigger_held:
+            trigger_held = True
+            target_hit = world.get_targeted_node() is not None
+            if handle_shot(target_hit):
+                break
 
-    if trigger_down and not trigger_held:
-        trigger_held = True
-        target_hit = world.get_targeted_node() is not None
-        if handle_shot(target_hit):
-            break
-
-    if not trigger_down:
-        trigger_held = False
+        if not trigger_down:
+            trigger_held = False
+finally:
+    haptic.close()
+    csv_file.close()
