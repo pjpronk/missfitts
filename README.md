@@ -14,6 +14,8 @@ First, create and activate a python virtual environment by running:
 
 ```
 python -m venv .venv
+.venv\Scripts\activate
+
 ./.venv/bin/activate
 ```
 
