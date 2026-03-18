@@ -5,6 +5,13 @@ from panda3d.core import (
     WindowProperties,
     CardMaker,
     ClockObject,
+    CollisionTraverser, 
+    CollisionNode, 
+    CollisionRay, 
+    CollisionHandlerQueue,
+    BitMask32,
+    Point2,
+    LineSegs
 )
 import math
 import random
@@ -34,7 +41,7 @@ class PandaWorld3D(ShowBase):
             ((1.7, 1.7, 1.7), (-8, 17, 0.35), (0.5, 0.5, 0.1, 1)), # Far Left
             ((1.5, 1.5, 0.8), (4, 5, 0.4), (0.5, 0.1, 0.5, 1)),    # Right Mid 
             ((0.9, 0.9, 2.0), (-3, 10, 1.0), (0.1, 0.5, 0.5, 1)),  # Left Near 
-            ((1.1, 1.1, 1.1), (4, 8, 5.0), (0.8, 0.4, 0.0, 1)),    # Far Right 
+            ((1.1, 1.1, 1.1), (4.5, 13, 5), (0.8, 0.4, 0.0, 1)),    # Far Right 
             ((0.9, 0.6, 1.2), (0.2, 0.15, 0.65), (0.3, 0.3, 0.3, 1)) # Mid Center
         ]
 
@@ -42,10 +49,12 @@ class PandaWorld3D(ShowBase):
         self.target_positions = []
         for size, pos, color in self.spot_configs:
             x, y, z = pos
-            box_height = size[2]  # The 3rd value in the 'size' tuple is the height
+            z_offset = size[2] + 0.4
+            y_offset = size[1]
+            x_offset = size[0] / 2
             
             # Keep X and Y the same, but add the box's height to Z
-            self.target_positions.append((x, y, z + box_height))
+            self.target_positions.append((x + x_offset, y + y_offset, z + z_offset))
 
         # Environment & Player Setup
         self.setup_lights()
@@ -72,6 +81,24 @@ class PandaWorld3D(ShowBase):
         self.dummy_node = None
         self.current_dummy_index = -1
         self.last_target_pos = None
+        
+        
+        ## Setting up hit detection system
+        self.cTrav = CollisionTraverser()
+        self.rayQueue = CollisionHandlerQueue()
+        
+        # Create the ray attached to the camera
+        pickerNode = CollisionNode('mouseRay')
+        pickerNP = self.camera.attachNewNode(pickerNode)
+        self.pickerRay = CollisionRay(0, 0, 0, 0, 1, 0)
+        pickerNode.addSolid(self.pickerRay)
+        
+        # Register with traverser
+        self.cTrav.addCollider(pickerNP, self.rayQueue)
+        
+        # Use a BitMask so we only hit targets, not walls/floors
+        self.target_mask = BitMask32.bit(1)
+        pickerNode.setFromCollideMask(self.target_mask)
 
 
     def setup_lights(self):
@@ -94,16 +121,18 @@ class PandaWorld3D(ShowBase):
         floor.setPos(0, 10, 0)
         floor.setColor(0.25, 0.28, 0.25, 1)
 
-    def create_box(self, parent, size=(1, 1, 1), pos=(0, 0, 0), color=(1, 1, 1, 1), texture_file=None):
+    def create_box(self, parent, size=(1, 1, 1), pos=(0, 0, 0), color=(1, 1, 1, 1), texture_file=None, mask=None):
         box = self.loader.loadModel("models/box")
+        box.reparentTo(parent)
         if texture_file:
-            box.setTexture(self.loader.loadTexture(texture_file))
+            box.setTexture(self.loader.loadTexture(texture_file), 1)
         else:
             box.clearTexture()
-            box.setColor(*color)
-        box.reparentTo(parent)
+            box.setColor(*color)        
         box.setScale(size[0], size[1], size[2])
         box.setPos(*pos)
+        if mask:
+            box.setCollideMask(mask)
         return box
 
     def create_wall_box(self):
@@ -132,6 +161,7 @@ class PandaWorld3D(ShowBase):
             size=(width, 1, height),
             pos=(-width/2, depth, 0),
             color=(0.5, 0.2, 0.2, 1),
+            texture_file = "textures/cs.jpg"
         )
 
         # ceiling
@@ -148,6 +178,7 @@ class PandaWorld3D(ShowBase):
             size=(width/2-5, depth, 1),
             pos=(5, 0, height/2-1),
             color=(0.5, 0.5, 0.5, 1),
+            texture_file="textures/concrete.jpg"
         )
 
     def create_gun_3d(self):
@@ -254,7 +285,7 @@ class PandaWorld3D(ShowBase):
         start_pos = (-3.0, 5.0, 0.0)   
         
         # End exactly at the edge of your second floor (x=5) and its height (z=4)
-        end_pos = (4.0, 9, 4.0)     
+        end_pos = (3.5, 9, 4.0)     
 
         for i in range(num_steps):
             # Calculate percentage along the staircase (0.0 to 1.0)
@@ -269,7 +300,8 @@ class PandaWorld3D(ShowBase):
                 self.render,
                 size=step_size,
                 pos=(step_x, step_y, step_z),
-                color=(1, 1, 0, 1), # Bright green, just like the drawing!
+                color=(0.1, 0.1, 0.1, 1), 
+                texture_file="textures/rusty_metal.jpg"
             )
         
     def spawn_random_target(self, target_size=0.6):
@@ -317,15 +349,73 @@ class PandaWorld3D(ShowBase):
             size=(target_size, target_size, target_size),
             pos=new_target_pos,
             color=(0.9, 0.1, 0.1, 1),  # Red
+            mask=self.target_mask,
         )
+        self.target_node = self.loader.loadModel("smiley")
+        self.target_node.reparentTo(self.render)
+        self.target_node.setScale(target_size / 1.5) 
+        self.target_node.setPos(new_target_pos)
+        self.target_node.setColorScale(0.9, 0.1, 0.1, 1)
 
         # 5. make the green block (Dummy)
-        self.dummy_node = self.create_box(
-            self.render,
-            size=(target_size, target_size, target_size),
-            pos=new_dummy_pos,
-            color=(0.1, 0.9, 0.1, 1),  # Green
-        )
-        
+        self.dummy_node = self.loader.loadModel("smiley")
+        self.dummy_node.reparentTo(self.render)
+        self.dummy_node.setScale(target_size / 1.5) 
+        self.dummy_node.setPos(new_dummy_pos)
+        self.dummy_node.setColorScale(0.1, 0.9, 0.1, 1)
+
         return id_score
     
+    def get_targeted_node(self):
+        print("checking for hit")
+        self.cTrav.traverse(self.render)
+        if self.rayQueue.getNumEntries() > 0:
+            self.rayQueue.sortEntries()
+            return self.rayQueue.getEntry(0).getIntoNodePath()
+        return None
+    def get_target_angular_error(self) -> tuple[float, float] | None:
+        """Returns (yaw_error, pitch_error) in degrees from crosshair to target.
+        Positive yaw = target is to the right; positive pitch = target is above."""
+        if self.target_node is None:
+            return None
+        local_pos = self.camera.getRelativePoint(self.render, self.target_node.getPos(self.render))
+        if local_pos.y <= 0:
+            return None  # target is behind the camera
+        yaw_error   = math.degrees(math.atan2(local_pos.x, local_pos.y))
+        pitch_error = math.degrees(math.atan2(local_pos.z, local_pos.y))
+        return yaw_error, pitch_error
+
+    def get_target_angular_radius(self, target_size: float) -> float | None:
+        """Returns the angular radius of the target in degrees based on its
+        physical size and distance from the camera."""
+        if self.target_node is None:
+            return None
+        local_pos = self.camera.getRelativePoint(self.render, self.target_node.getPos(self.render))
+        distance = local_pos.length()
+        if distance < 1e-6:
+            return None
+        return math.degrees(math.atan2(target_size / 2.0, distance))
+
+    def get_target_position_error(self) -> tuple[float, float] | None:
+        """Returns (yaw_error, pitch_error) in degrees from crosshair to target.
+        Positive yaw = target is to the right; positive pitch = target is above."""
+        if self.target_node is None:
+            return None
+        local_pos = self.camera.getRelativePoint(self.render, self.target_node.getPos(self.render))
+        if local_pos.y <= 0:
+            return None  # target is behind the camera
+        yaw_error   = math.degrees(math.atan2(local_pos.x, local_pos.y))
+        pitch_error = math.degrees(math.atan2(local_pos.z, local_pos.y))
+        return yaw_error, pitch_error
+
+    def draw_force_vector(self, fx: float, fy: float, scale: float = 0.001):
+        if hasattr(self, '_force_line_np') and self._force_line_np:
+            self._force_line_np.removeNode()
+        ls = LineSegs()
+        ls.setThickness(2)
+        ls.setColor(1, 0.5, 0, 1)  # orange
+        # Origin at screen center (0, 0) in aspect2d space
+        ls.moveTo(0, 0, 0)
+        # fx is horizontal (maps to X in aspect2d), fy is vertical (maps to Z in aspect2d)
+        ls.drawTo(fx * scale, 0, -fy * scale)
+        self._force_line_np = self.aspect2d.attachNewNode(ls.create())

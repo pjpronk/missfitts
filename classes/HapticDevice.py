@@ -3,7 +3,7 @@ import numpy as np
 import serial
 import serial.tools.list_ports
 
-from classes.HaplyHAPI import Board, Device, Pantograph, Mechanisms
+from classes.HaplyHAPI import Board, Device, Pantograph
 
 
 class HapticDevice:
@@ -51,17 +51,68 @@ class HapticDevice:
                     print("[HapticDevice]: Ready.")
                     break
 
+            self._device.device_read_data()
+            angles = self._device.get_device_angles()
+            pos = self._device.get_device_position(angles)
+            self._last_angles = (float(angles[0]), float(angles[1]))
+            self._last_position = (float(pos[0]), float(pos[1]))
+            self._cal_angles = (0.0, 0.0)
+            self._cal_position = (0.0, 0.0)
+            self._vel_pos = (float(pos[0]), float(pos[1]))
+            self._vel_time = time.monotonic()
+            self._vel = (0.0, 0.0)
             self.connected = True
         else:
             print("[HapticDevice]: No device found, running without haptics.")
             self.connected = False
 
+    def calibrate(self):
+        """Sets the current position and angles as the (0, 0) origin."""
+        self._cal_position = self._last_position
+        self._cal_angles = self._last_angles
+        print(f"[HapticDevice]: Calibrated — pos={self._cal_position}, angles={self._cal_angles}")
+
+    def _read_device(self):
+        """Reads a fresh packet if one is available; otherwise uses cached values."""
+        if self._board.data_available():
+            self._device.device_read_data()
+            angles = self._device.get_device_angles()
+            pos = self._device.get_device_position(angles)
+            self._last_angles = (float(angles[0]), float(angles[1]))
+            self._last_position = (float(pos[0]), float(pos[1]))
+
+    def get_angles(self) -> tuple[float, float]:
+        """Returns calibrated motor angles (a1, a2) in degrees.
+        Differential (a1 - a2) correlates with left/right,
+        common-mode (a1 + a2) correlates with forward/backward."""
+        self._read_device()
+        a1 = self._last_angles[0] - self._cal_angles[0]
+        a2 = self._last_angles[1] - self._cal_angles[1]
+        return a1, a2
+
     def get_position(self) -> tuple[float, float]:
-        """Returns endpoint position (x, y) in meters."""
-        self._device.device_read_data()
-        angles = self._device.get_device_angles()
-        pos = self._device.get_device_position(angles)
-        return float(pos[0]), float(pos[1])
+        """Returns calibrated endpoint position (x, y) in meters."""
+        self._read_device()
+        x = self._last_position[0] - self._cal_position[0]
+        y = self._last_position[1] - self._cal_position[1]
+        return x, y
+
+    def get_velocity(self, alpha: float = 0.2) -> tuple[float, float]:
+        """Returns low-pass filtered end-effector velocity (vx, vy) in m/s."""
+        now = time.monotonic()
+        x, y = self.get_position()
+        dt = now - self._vel_time
+        if dt > 0:
+            raw_vx = (x - self._vel_pos[0]) / dt
+            raw_vy = (y - self._vel_pos[1]) / dt
+            vx = alpha * raw_vx + (1 - alpha) * self._vel[0]
+            vy = alpha * raw_vy + (1 - alpha) * self._vel[1]
+        else:
+            vx, vy = self._vel
+        self._vel_time = now
+        self._vel_pos = (x, y)
+        self._vel = (vx, vy)
+        return vx, vy
 
     def set_force(self, fx: float, fy: float):
         """Sends Cartesian force (fx, fy) in Newtons to the device."""
