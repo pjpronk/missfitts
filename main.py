@@ -7,7 +7,7 @@ MOUSE_SENSITIVITY = 0.15
 HAPTIC_SCALE = 1.0  # degrees per motor degree
 
 haptic = HapticDevice()
-force_gen = HapticForceGenerator(f_max=-200, sigma=30.0)
+force_gen = HapticForceGenerator(f_max=0, sigma=30.0)
 
 if haptic.connected:
     haptic.calibrate()
@@ -26,7 +26,7 @@ trial_start_time = 0.0
 shot_start_time = 0.0
 trigger_held = False
 
-csv_file = open('CSVfile.csv', 'w')
+csv_file = open('Pushingbartholdv2.csv', 'a')
 
 world.spawn_random_target(target_size=target_size)
 print(f"Shoot the first target to start the trial of {total_trials}!")
