@@ -26,7 +26,7 @@ trial_start_time = 0.0
 shot_start_time = 0.0
 trigger_held = False
 
-csv_file = open('Pushingbartholdv2.csv', 'a')
+csv_file = open('JuneTowardsTarget.csv', 'a')
 
 world.spawn_random_target(target_size=target_size)
 print(f"Shoot the first target to start the trial of {total_trials}!")
