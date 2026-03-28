@@ -1,13 +1,22 @@
 from classes.PandaWorld3D import PandaWorld3D
 from classes.HapticDevice import HapticDevice
 from classes.HapticForceGenerator import HapticForceGenerator
+import argparse
 import time
+
+parser = argparse.ArgumentParser()
+parser.add_argument("name", help="participant name")
+mode = parser.add_mutually_exclusive_group(required=True)
+mode.add_argument("--pull", action="store_const", dest="f_max", const=200)
+mode.add_argument("--push", action="store_const", dest="f_max", const=-200)
+mode.add_argument("--none", action="store_const", dest="f_max", const=0)
+args = parser.parse_args()
 
 MOUSE_SENSITIVITY = 0.15
 HAPTIC_SCALE = 1.0  # degrees per motor degree
 
 haptic = HapticDevice()
-force_gen = HapticForceGenerator(f_max=0, sigma=30.0)
+force_gen = HapticForceGenerator(f_max=args.f_max, sigma=30.0)
 
 if haptic.connected:
     haptic.calibrate()
@@ -26,7 +35,8 @@ trial_start_time = 0.0
 shot_start_time = 0.0
 trigger_held = False
 
-csv_file = open('JuneTowardsTarget.csv', 'a')
+mode_label = "pulling" if args.f_max > 0 else "pushing" if args.f_max < 0 else "none"
+csv_file = open(f'{args.name}_{mode_label}.csv', 'a')
 
 world.spawn_random_target(target_size=target_size)
 print(f"Shoot the first target to start the trial of {total_trials}!")
@@ -91,7 +101,7 @@ def is_trigger_pressed():
     if not world.mouseWatcherNode.hasMouse():
         return False
     return world.mouseWatcherNode.isButtonDown(
-        world.win.getKeyboardMap().getMappedButton("t")
+        world.win.getKeyboardMap().getMappedButton("space")
     )
 
 try:
