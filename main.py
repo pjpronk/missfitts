@@ -7,8 +7,8 @@ import time
 parser = argparse.ArgumentParser()
 parser.add_argument("name", help="participant name")
 mode = parser.add_mutually_exclusive_group(required=True)
-mode.add_argument("--pull", action="store_const", dest="f_max", const=200)
-mode.add_argument("--push", action="store_const", dest="f_max", const=-200)
+mode.add_argument("--pull", action="store_const", dest="f_max", const=250)
+mode.add_argument("--push", action="store_const", dest="f_max", const=-300)
 mode.add_argument("--none", action="store_const", dest="f_max", const=0)
 args = parser.parse_args()
 
@@ -16,7 +16,7 @@ MOUSE_SENSITIVITY = 0.15
 HAPTIC_SCALE = 1.0  # degrees per motor degree
 
 haptic = HapticDevice()
-force_gen = HapticForceGenerator(f_max=args.f_max, sigma=30.0)
+force_gen = HapticForceGenerator(f_max=args.f_max, sigma=25.0)
 
 if haptic.connected:
     haptic.calibrate()
@@ -54,7 +54,7 @@ def update_force():
     if not haptic.connected:
         return
     error = world.get_target_position_error()
-    dead_zone = world.get_target_angular_radius(target_size) or 0.0
+    dead_zone = 0.0
     fx, fy = force_gen.calculate_force(*error, 0) if error is not None else (0.0, 0.0)
     haptic.set_force(-fx, fy)
 
