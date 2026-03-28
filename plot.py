@@ -8,7 +8,6 @@ def load_and_process(file_list, condition_name):
     combined_data = []
     for file_name in file_list:
         if not os.path.exists(file_name):
-            print(f"❌ ERROR: Could not find '{file_name}'")
             continue
             
         print(f"✅ Successfully loaded '{file_name}'")
@@ -25,11 +24,12 @@ def load_and_process(file_list, condition_name):
         df['Time'] = pd.to_numeric(df['Time'])
         
         # ---> FORCE EVERY TRIAL TO BE A HIT (1) <---
-        # This ignores any misses for all subsequent analysis and plots
         df['Hit'] = 1 
         
         df['Condition'] = condition_name
-        df['Participant'] = file_name.replace(condition_name.lower(), "").replace(".csv", "").replace(condition_name, "")
+        
+        # Safely extract participant name (e.g., "PullingPieter.csv" -> "pieter")
+        df['Participant'] = file_name.lower().replace(condition_name.lower(), "").replace(".csv", "")
         
         df['Set'] = (df.index // 20) + 1
         df['Continuous_Trial'] = np.arange(1, len(df) + 1)
@@ -38,30 +38,68 @@ def load_and_process(file_list, condition_name):
     return pd.concat(combined_data, ignore_index=True) if combined_data else pd.DataFrame()
 
 # ==========================================
-# EXACT FILE NAMES
+# AUTOMATIC FILE DETECTION
 # ==========================================
-pulling_files = ["PullingDook.csv", "PullingPieter.csv", "PullingTimo.csv"]
-pushing_files = ["PushingAdriaan.csv", "PushingBarthold.csv", "PushingFriso.csv", "PushingJulius.csv"]
+# Get all files in the current directory that end in .csv
+all_files = [f for f in os.listdir('.') if f.endswith('.csv')]
 
-print("--- LOADING DATA ---")
+# Automatically separate them into pulling and pushing groups (case-insensitive)
+pulling_files = [f for f in all_files if f.lower().startswith('pulling')]
+pushing_files = [f for f in all_files if f.lower().startswith('pushing')]
+
+print(f"--- FOUND {len(pulling_files)} PULLING FILES AND {len(pushing_files)} PUSHING FILES ---")
+
 df_pull = load_and_process(pulling_files, "Pulling")
 df_push = load_and_process(pushing_files, "Pushing")
-df_all = pd.concat([df_pull, df_push], ignore_index=True)
 
-if df_all.empty:
-    print("\n🚨 CRITICAL ERROR: No data found at all!")
+if df_pull.empty and df_push.empty:
+    print("\n🚨 CRITICAL ERROR: No data found at all! Are the CSVs in the same folder as this script?")
     exit()
 
-# Global visual settings
-sns.set_theme(style="ticks", context="talk")
-palette_main = {"Pushing": "red", "Pulling": "blue"}
+# Combine data
+df_all = pd.concat([df_pull, df_push], ignore_index=True)
+
+# ==========================================
+# CALCULATE GROUP NUMBERS (N)
+# ==========================================
+# Count unique participants dynamically based on what was loaded
+n_pull = df_all[df_all['Condition'] == 'Pulling']['Participant'].nunique() if not df_pull.empty else 0
+n_push = df_all[df_all['Condition'] == 'Pushing']['Participant'].nunique() if not df_push.empty else 0
+
+# Create new labels with the N appended
+label_pull = f"Pulling (N={n_pull})"
+label_push = f"Pushing (N={n_push})"
+
+# Map the raw condition names to the new labels for the plots
+df_all['Condition'] = df_all['Condition'].map({"Pulling": label_pull, "Pushing": label_push})
+
+# ==========================================
+# 🌙 DARK MODE SETTINGS
+# ==========================================
+plt.style.use('dark_background')
+sns.set_context("talk")
+
+# Force strictly black background and white text globally
+plt.rcParams.update({
+    "figure.facecolor": "black",
+    "axes.facecolor": "black",
+    "savefig.facecolor": "black",
+    "savefig.edgecolor": "black",
+    "text.color": "white",
+    "axes.labelcolor": "white",
+    "xtick.color": "white",
+    "ytick.color": "white",
+    "axes.edgecolor": "white"
+})
+
+# Dynamic palette using the new N labels
+palette_main = {label_push: "#ff4d4d", label_pull: "#4d94ff"}
 
 # =====================================================================
 # FIGURE 1: Trials vs Completion Time (Smooth Curves, No Dots)
 # =====================================================================
 plt.figure(figsize=(12, 6))
 
-# Removed marker='o' to create smooth curves
 sns.lineplot(
     data=df_all, 
     x='Continuous_Trial', 
@@ -73,8 +111,8 @@ sns.lineplot(
     alpha=0.8
 )
 
-plt.axvline(x=60.5, color='black', linestyle='--', linewidth=1.5)
-plt.text(61, df_all['Time'].max() * 0.9, ' Feedback Removed', fontsize=12)
+plt.axvline(x=60.5, color='white', linestyle='--', linewidth=1.5)
+plt.text(61, df_all['Time'].max() * 0.9, ' Feedback Removed', color='white', fontsize=12)
 
 plt.title("Figure 1. Completion Time across All Trials")
 plt.xlabel("Trial Number")
@@ -89,44 +127,42 @@ print("Saved Figure 1: Figure1_Trials_vs_Time_Smooth.png")
 # =====================================================================
 # FIGURE 2: Push vs Pull - Change in Completion Time (Set 4 vs Set 3)
 # =====================================================================
-# Calculate mean time per participant per set
 set_means = df_all.groupby(['Participant', 'Condition', 'Set'])['Time'].mean().reset_index()
 
-# Extract Set 3 (Final Training) and Set 4 (Transfer)
-set3 = set_means[set_means['Set'] == 3].set_index('Participant')['Time']
-set4 = set_means[set_means['Set'] == 4].set_index('Participant')['Time']
+# We only process Figure 2 if both Set 3 and Set 4 exist
+if 3 in set_means['Set'].values and 4 in set_means['Set'].values:
+    set3 = set_means[set_means['Set'] == 3].set_index('Participant')['Time']
+    set4 = set_means[set_means['Set'] == 4].set_index('Participant')['Time']
 
-# Calculate the Change (Transfer minus Final Training)
-change_df = pd.DataFrame({
-    'Condition': set_means[set_means['Set'] == 3].set_index('Participant')['Condition'],
-    'Time_Change': set4 - set3
-}).reset_index()
+    change_df = pd.DataFrame({
+        'Condition': set_means[set_means['Set'] == 3].set_index('Participant')['Condition'],
+        'Time_Change': set4 - set3
+    }).reset_index()
 
-plt.figure(figsize=(7, 6))
+    plt.figure(figsize=(7, 6))
+    sns.pointplot(
+        data=change_df, 
+        x='Condition', 
+        y='Time_Change', 
+        hue='Condition', 
+        order=[label_push, label_pull], 
+        palette=palette_main, 
+        capsize=0.1, 
+        errorbar=('ci', 95), 
+        join=False,
+        markers='o', 
+        legend=False
+    )
 
-sns.pointplot(
-    data=change_df, 
-    x='Condition', 
-    y='Time_Change', 
-    hue='Condition', 
-    order=['Pushing', 'Pulling'], 
-    palette=palette_main, 
-    capsize=0.1, 
-    errorbar=('ci', 95), 
-    join=False,      # Removes the line connecting the two condition dots
-    markers='o', 
-    legend=False
-)
-
-plt.axhline(y=0, color='black', linestyle='--', linewidth=1)
-plt.title("Figure 2. Change in Completion Time\n(Without vs. Without Feedback)")
-plt.ylabel("Time Difference (s)")
-plt.xlabel("Condition")
-sns.despine()
-plt.tight_layout()
-plt.savefig("Figure2_Change_in_Time.png", dpi=300)
-plt.close()
-print("Saved Figure 2: Figure2_Change_in_Time.png")
+    plt.axhline(y=0, color='white', linestyle='--', linewidth=1)
+    plt.title("Figure 2. Change in Completion Time\n(Without vs. Without Feedback)")
+    plt.ylabel("Time Difference (s)")
+    plt.xlabel("Condition")
+    sns.despine()
+    plt.tight_layout()
+    plt.savefig("Figure2_Change_in_Time.png", dpi=300)
+    plt.close()
+    print("Saved Figure 2: Figure2_Change_in_Time.png")
 
 
 # =====================================================================
@@ -138,20 +174,18 @@ def create_phase_label(row):
 
 df_all['Phase_Group'] = df_all.apply(create_phase_label, axis=1)
 
-# Define the Left-to-Right order for the 4 categories
 order_4 = [
-    "Pushing\n(Set 1-3)",
-    "Pushing\n(Set 4)",
-    "Pulling\n(Set 1-3)",
-    "Pulling\n(Set 4)"
+    f"{label_push}\n(Set 1-3)",
+    f"{label_push}\n(Set 4)",
+    f"{label_pull}\n(Set 1-3)",
+    f"{label_pull}\n(Set 4)"
 ]
 
-# Color palette maintaining the Red/Blue theme (lighter for training, darker for transfer)
 palette_4 = {
-    "Pushing\n(Set 1-3)": "#ff6666",  # Light Red
-    "Pushing\n(Set 4)": "#cc0000",    # Dark Red
-    "Pulling\n(Set 1-3)": "#66b3ff",  # Light Blue
-    "Pulling\n(Set 4)": "#005ce6"     # Dark Blue
+    f"{label_push}\n(Set 1-3)": "#ff6666",  
+    f"{label_push}\n(Set 4)": "#cc0000",    
+    f"{label_pull}\n(Set 1-3)": "#66b3ff",  
+    f"{label_pull}\n(Set 4)": "#005ce6"     
 }
 
 plt.figure(figsize=(10, 7))
@@ -179,4 +213,4 @@ plt.savefig("Figure3_Phase_Comparison.png", dpi=300)
 plt.close()
 print("Saved Figure 3: Figure3_Phase_Comparison.png")
 
-print("\n All 3 figures generated successfully!")
+print("\n🎉 All 3 dark-themed figures generated successfully!")
