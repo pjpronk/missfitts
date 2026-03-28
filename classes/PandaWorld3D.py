@@ -7,7 +7,8 @@ from panda3d.core import (
     ClockObject,
     CollisionTraverser, 
     CollisionNode, 
-    CollisionRay, 
+    CollisionRay,
+    CollisionSphere,
     CollisionHandlerQueue,
     BitMask32,
     Point2,
@@ -343,19 +344,13 @@ class PandaWorld3D(ShowBase):
             id_score = math.log2((distance / target_size) + 1)
 
 
-        # 4. make the red block (Target)
-        self.target_node = self.create_box(
-            self.render,
-            size=(target_size, target_size, target_size),
-            pos=new_target_pos,
-            color=(0.9, 0.1, 0.1, 1),  # Red
-            mask=self.target_mask,
-        )
+        # 4. make the red target (smiley)
         self.target_node = self.loader.loadModel("smiley")
         self.target_node.reparentTo(self.render)
-        self.target_node.setScale(target_size / 1.5) 
+        self.target_node.setScale(target_size / 1.5)
         self.target_node.setPos(new_target_pos)
         self.target_node.setColorScale(0.9, 0.1, 0.1, 1)
+        self.target_node.setCollideMask(self.target_mask)
 
         # 5. make the green block (Dummy)
         self.dummy_node = self.loader.loadModel("smiley")
