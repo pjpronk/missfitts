@@ -35,7 +35,7 @@ trial_start_time = 0.0
 shot_start_time = 0.0
 trigger_held = False
 
-mode_label = "pulling" if args.f_max > 0 else "pushing" if args.f_max < 0 else "none"
+mode_label = "pulling" if args.f_max > 0 else "pushing" if args.f_max < 0 else "control"
 csv_file = open(f'{args.name}_{mode_label}.csv', 'a')
 
 world.spawn_random_target(target_size=target_size)
